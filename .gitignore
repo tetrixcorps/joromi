@@ -1,0 +1,114 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude sensitive variables files
+*.tfvars
+*.tfvars.json
+
+# Exclude override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Exclude CLI configuration files
+.terraformrc
+terraform.rc
+
+# Exclude .env files
+.env
+*.env
+
+# Exclude kubeconfig
+kubeconfig*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+
+# Models and Data
+models/checkpoints/
+models/weights/
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+frontend/data/users.json
+
+# Logs and Cache
+logs/
+*.log
+.cache/
+.pytest_cache/
+model_cache/
+.coverage
+coverage.xml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+.docker/
+
+# Environment variables
+.env
+.env.*
+
+# Large files and directories
+*.tar.gz
+*.zip
+*.rar
+data/raw/
+data/processed/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Environment variables
+.env
+.env.* 

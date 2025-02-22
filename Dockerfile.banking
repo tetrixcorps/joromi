@@ -1,0 +1,22 @@
+# Build stage
+FROM base-service:latest as builder
+
+# Install banking-specific dependencies
+COPY requirements.banking.txt .
+RUN pip3 install --no-cache-dir -r requirements.banking.txt
+
+# Runtime stage
+FROM base-service:latest
+
+# Copy virtual environment with banking dependencies
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy service code
+COPY services/banking_service.py /app/services/
+COPY models/banking/ /app/models/banking/
+
+ENV SERVICE_TYPE=banking \
+    MODEL_CACHE_DIR=/app/model_cache \
+    PORT=8004
+
+CMD ["python3", "-m", "services.banking_service"] 

@@ -1,0 +1,9 @@
+fastapi==0.68.2
+uvicorn==0.15.0
+python-multipart==0.0.5
+httpx==0.24.1
+redis==4.5.5
+boto3==1.26.137
+python-consul==1.1.0
+prometheus-client==0.16.0
+torch==2.0.0 

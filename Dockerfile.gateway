@@ -1,0 +1,48 @@
+# Build stage
+FROM python:3.10-slim as builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    VIRTUAL_ENV=/opt/venv
+
+RUN python3.10 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Install dependencies
+COPY requirements.gateway.txt .
+RUN pip3 install --no-cache-dir -r requirements.gateway.txt
+
+# Runtime stage
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PROMETHEUS_MULTIPROC_DIR=/tmp \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Create necessary directories
+WORKDIR /app
+RUN mkdir -p /app/logs /tmp \
+    && chmod 777 /tmp
+
+# Copy application files
+COPY services/gateway.py /app/services/
+COPY utils/ /app/utils/
+COPY schemas/ /app/schemas/
+COPY config/ /app/config/
+
+ENV PORT=8000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+CMD ["python3", "-m", "services.gateway"] 
