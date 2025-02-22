@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, Optional
 import torch
+from enum import Enum
 
 @dataclass
 class ModelSpecs:
@@ -11,6 +12,13 @@ class ModelSpecs:
     quantization: Optional[str] = None
     processor: Optional[str] = None
     model_class: Optional[str] = None
+
+@dataclass
+class ModelConfig:
+    name: str
+    path: str
+    type: str
+    device: str = "cuda"
 
 class ModelConfigurations:
     GENERAL_PURPOSE = ModelSpecs(
@@ -101,4 +109,34 @@ class ModelConfigurations:
             'max_seq_length': 4096
         },
         trust_remote_code=True
+    )
+    
+    PIX2STRUCT = ModelConfig(
+        name="google/pix2struct-base",
+        path="models/pix2struct",
+        type="visual_qa"
+    )
+    
+    DOLPHIN_CHAT = ModelConfig(
+        name="cognitivecomputations/dolphin-2.6-mixtral-8x7b",
+        path="models/dolphin",
+        type="chat"
+    )
+    
+    SPEECH_MODEL = ModelConfig(
+        name="speech_model",
+        path="models/speech",
+        type="speech"
+    )
+    
+    ASR_MODEL = ModelConfig(
+        name="asr_model",
+        path="models/asr",
+        type="asr"
+    )
+    
+    TRANSLATION_MODEL = ModelConfig(
+        name="translation_model",
+        path="models/translation",
+        type="translation"
     ) 

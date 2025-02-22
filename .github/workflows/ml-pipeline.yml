@@ -11,34 +11,48 @@ env:
   TEST_TAG: test
   PROD_TAG: latest
 
+environments:
+  staging:
+    name: staging
+  production:
+    name: production
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.10'
-
-      - name: Install dependencies
+      - name: Run Tests
         run: |
           python -m pip install --upgrade pip
-          # Add project root to PYTHONPATH
-          echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-          # Install test dependencies
-          pip install -r tests/requirements-test.txt
-          # Install the package in editable mode
-          pip install -e services/api_gateway
+          pip install -r requirements.txt
+          pytest tests/
 
-      - name: Run unit tests
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy to Staging
         run: |
-          pytest tests/unit/ -v --cov=app
+          echo "Deploying to staging..."
 
-      - name: Run integration tests
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy to Production
         run: |
-          pytest tests/integration/ -v
+          echo "Deploying to production..."
 
   build:
     needs: test
