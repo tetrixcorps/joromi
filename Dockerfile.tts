@@ -1,0 +1,15 @@
+FROM base-service:latest
+
+# Install TTS-specific dependencies
+COPY requirements.tts.txt .
+RUN pip3 install --no-cache-dir -r requirements.tts.txt
+
+# Copy TTS service code
+COPY services/tts_service.py /app/services/
+COPY models/tts/ /app/models/tts/
+
+ENV SERVICE_TYPE=tts \
+    MODEL_CACHE_DIR=/app/model_cache \
+    PORT=8003
+
+CMD ["python3", "-m", "services.tts_service"] 

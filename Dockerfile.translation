@@ -1,0 +1,22 @@
+# Build stage
+FROM base-service:latest as builder
+
+# Install translation-specific dependencies
+COPY requirements.translation.txt .
+RUN pip3 install --no-cache-dir -r requirements.translation.txt
+
+# Runtime stage
+FROM base-service:latest
+
+# Copy virtual environment with translation dependencies
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy service code
+COPY services/translation_service.py /app/services/
+COPY models/translation/ /app/models/translation/
+
+ENV SERVICE_TYPE=translation \
+    MODEL_CACHE_DIR=/app/model_cache \
+    PORT=8002
+
+CMD ["python3", "-m", "services.translation_service"] 

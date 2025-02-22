@@ -1,0 +1,63 @@
+# Build stage
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04 as builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    VIRTUAL_ENV=/opt/venv
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3.10-venv \
+    python3-pip \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python3.10 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Install Python dependencies
+COPY requirements.base.txt .
+RUN pip3 install --no-cache-dir -r requirements.base.txt
+
+# Runtime stage
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PROMETHEUS_MULTIPROC_DIR=/tmp \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3.10-venv \
+    ffmpeg \
+    libsndfile1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Create necessary directories
+WORKDIR /app
+RUN mkdir -p /app/logs /app/model_cache /tmp \
+    && chmod 777 /tmp
+
+# Copy application files
+COPY utils/ /app/utils/
+COPY config/ /app/config/
+COPY schemas/ /app/schemas/
+COPY services/base_service.py /app/services/
+
+# Create prometheus multiproc directory
+RUN mkdir -p /tmp && chmod 777 /tmp
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1 

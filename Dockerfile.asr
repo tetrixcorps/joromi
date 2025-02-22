@@ -1,0 +1,24 @@
+# Build stage
+FROM base-service:latest as builder
+
+# Install ASR-specific dependencies
+COPY requirements.asr.txt .
+RUN pip3 install --no-cache-dir -r requirements.asr.txt
+
+# Runtime stage
+FROM base-service:latest
+
+# Copy virtual environment with ASR dependencies
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy service code
+COPY services/asr_service.py /app/services/
+COPY models/asr/ /app/models/asr/
+
+# Set service-specific environment variables
+ENV SERVICE_TYPE=asr \
+    MODEL_CACHE_DIR=/app/model_cache \
+    PORT=8001
+
+# Run the service
+CMD ["python3", "-m", "services.asr_service"] 

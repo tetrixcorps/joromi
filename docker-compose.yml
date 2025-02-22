@@ -1,0 +1,193 @@
+version: '3.8'
+
+services:
+  consul:
+    image: consul:latest
+    ports:
+      - "8500:8500"
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - CONSUL_HOST=consul
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+      - PROMETHEUS_MULTIPROC_DIR=/tmp
+    volumes:
+      - ./logs:/app/logs
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    depends_on:
+      - consul
+      - redis
+      - prometheus
+
+  asr:
+    build:
+      context: .
+      dockerfile: Dockerfile.asr
+    runtime: nvidia
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - CONSUL_HOST=consul
+      - LOG_LEVEL=INFO
+      - PROMETHEUS_MULTIPROC_DIR=/tmp
+    volumes:
+      - model-cache:/app/model_cache
+      - ./logs:/app/logs
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+
+  translation:
+    build:
+      context: .
+      dockerfile: Dockerfile.translation
+    runtime: nvidia
+    environment:
+      - CUDA_VISIBLE_DEVICES=1
+      - CONSUL_HOST=consul
+    volumes:
+      - model-cache:/app/model_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  tts:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts
+    runtime: nvidia
+    environment:
+      - CUDA_VISIBLE_DEVICES=2
+      - CONSUL_HOST=consul
+    volumes:
+      - model-cache:/app/model_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  banking:
+    build:
+      context: .
+      dockerfile: Dockerfile.banking
+    runtime: nvidia
+    environment:
+      - CUDA_VISIBLE_DEVICES=3
+      - CONSUL_HOST=consul
+    volumes:
+      - model-cache:/app/model_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - GATEWAY_URL=http://gateway:8000
+    depends_on:
+      - gateway
+    volumes:
+      - ./frontend:/app
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+volumes:
+  model-cache:
+  redis-data:
+  prometheus-data:
+  grafana-data: 
