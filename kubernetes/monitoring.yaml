@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ml-service-monitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: ml-service
+  endpoints:
+  - port: metrics
+    interval: 15s
+  namespaceSelector:
+    matchNames:
+    - default
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-service-metrics
+  labels:
+    app: ml-service
+spec:
+  ports:
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+  selector:
+    app: ml-service 

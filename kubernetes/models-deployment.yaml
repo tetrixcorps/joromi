@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: llm-service
+  template:
+    spec:
+      containers:
+      - name: llm-service
+        image: your-registry/llm-service:latest
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-storage
+          mountPath: /app/models
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc 
