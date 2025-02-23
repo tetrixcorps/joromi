@@ -1,0 +1,16 @@
+# Default owners for everything in the repo
+*       @team-lead @senior-developer
+
+# ML model related files
+app/models/*  @ml-team-lead
+
+# Infrastructure files
+terraform/*   @devops-team
+kubernetes/*  @devops-team
+
+# CI/CD pipeline
+.github/workflows/*  @devops-team
+
+# API and Services
+app/api/*      @backend-team
+app/services/* @backend-team 

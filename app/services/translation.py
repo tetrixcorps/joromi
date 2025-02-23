@@ -12,8 +12,26 @@ class TranslationService:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
         
-        # Supported language codes
+        # Supported language codes including African languages
         self.supported_languages = {
+            # African Languages
+            "af": "afr",  # Afrikaans
+            "am": "amh",  # Amharic
+            "ha": "hau",  # Hausa
+            "ig": "ibo",  # Igbo
+            "ln": "lin",  # Lingala
+            "mg": "mlg",  # Malagasy
+            "ny": "nya",  # Nyanja/Chichewa
+            "om": "orm",  # Oromo
+            "sn": "sna",  # Shona
+            "so": "som",  # Somali
+            "sw": "swh",  # Swahili
+            "wo": "wol",  # Wolof
+            "xh": "xho",  # Xhosa
+            "yo": "yor",  # Yoruba
+            "zu": "zul",  # Zulu
+            
+            # Existing languages
             "en": "eng",  # English
             "es": "spa",  # Spanish
             "fr": "fra",  # French
@@ -22,8 +40,49 @@ class TranslationService:
             "ja": "jpn",  # Japanese
             "ko": "kor",  # Korean
             "ar": "ara",  # Arabic
-            # Add more languages as needed
         }
+
+        # Add language names for UI display
+        self.language_names = {
+            # African Languages
+            "afr": "Afrikaans",
+            "amh": "Amharic (አማርኛ)",
+            "hau": "Hausa (Hausa)",
+            "ibo": "Igbo (Igbo)",
+            "lin": "Lingala (Lingála)",
+            "mlg": "Malagasy",
+            "nya": "Nyanja/Chichewa (Chichewa)",
+            "orm": "Oromo (Oromoo)",
+            "sna": "Shona (chiShona)",
+            "som": "Somali (Soomaali)",
+            "swh": "Swahili (Kiswahili)",
+            "wol": "Wolof (Wolof)",
+            "xho": "Xhosa (isiXhosa)",
+            "yor": "Yoruba (Yorùbá)",
+            "zul": "Zulu (isiZulu)",
+            
+            # Existing languages
+            "eng": "English",
+            "spa": "Spanish (Español)",
+            "fra": "French (Français)",
+            "deu": "German (Deutsch)",
+            "cmn": "Chinese (中文)",
+            "jpn": "Japanese (日本語)",
+            "kor": "Korean (한국어)",
+            "ara": "Arabic (العربية)",
+        }
+
+    async def get_language_name(self, lang_code: str) -> str:
+        """Get the display name of a language"""
+        return self.language_names.get(lang_code, lang_code)
+
+    async def is_african_language(self, lang_code: str) -> bool:
+        """Check if a language code represents an African language"""
+        african_codes = {
+            "afr", "amh", "hau", "ibo", "lin", "mlg", "nya", 
+            "orm", "sna", "som", "swh", "wol", "xho", "yor", "zul"
+        }
+        return lang_code in african_codes
 
     async def detect_language(self, text: str) -> str:
         """Detect the language of the input text"""
