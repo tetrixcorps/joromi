@@ -22,4 +22,16 @@ COPY . /app/
 WORKDIR /app
 
 # Run the application
-CMD ["python3", "app.py"] 
+CMD ["python3", "app.py"]
+
+FROM python:3.10-slim as test
+COPY requirements-dev.txt .
+RUN pip install -r requirements-dev.txt
+COPY . .
+RUN pytest tests/unit tests/integration
+
+FROM python:3.10-slim as production
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY app/ /app/
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 

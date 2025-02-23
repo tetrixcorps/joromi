@@ -1,0 +1,9 @@
+african_translation/
+├── __init__.py
+├── scripts/
+│   ├── __init__.py
+│   └── finetune_translation.py
+├── utils/
+│   ├── __init__.py
+│   └── african_language_utils.py
+└── requirements.txt 

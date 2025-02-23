@@ -1,0 +1,23 @@
+# Required variables
+do_token = "your-digitalocean-api-token"  # Required: Get from DigitalOcean dashboard
+
+# SSH Configuration (at least one of these is required)
+ssh_keys = []                          # Option 1: List of existing SSH key fingerprints
+ssh_key_path = "~/.ssh/id_rsa.pub"    # Option 2: Path to SSH public key file
+
+# Environment Configuration
+environment = "dev"  # Optional: Defaults to "dev"
+do_region   = "nyc1" # Optional: Defaults to "nyc1"
+
+# Resource Configuration
+space_name       = "models"  # Required: Base name for Spaces bucket
+additional_tags  = ["ml-project", "gpu-enabled"]  # Optional: Additional resource tags
+
+# Kubernetes Configuration
+kubernetes_version = "1.27"        # Optional: Defaults to "1.27"
+node_pool_size    = "s-4vcpu-8gb" # Optional: Defaults to "s-4vcpu-8gb"
+gpu_droplet_size  = "g-2vcpu-8gb" # Optional: Defaults to "g-2vcpu-8gb"
+
+# Testing Configuration
+test_schedule = "0 */6 * * *"  # Run tests every 6 hours
+test_image_version = "1.0.0" 

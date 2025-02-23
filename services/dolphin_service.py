@@ -19,9 +19,7 @@ class DolphinService(BaseModelService):
         return AutoModelForCausalLM.from_pretrained(
             "cognitivecomputations/dolphin-2.6-mixtral-8x7b",
             torch_dtype=torch.float16,
-            device_map="auto",
-            trust_remote_code=True,
-            low_cpu_mem_usage=True
+            device_map="auto"
         )
 
     async def load_tokenizer(self) -> AutoTokenizer:

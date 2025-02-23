@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Union, List
+from typing import Dict, Any, Optional, Union, List, AsyncGenerator
 import torch
 from dataclasses import dataclass
 from config.model_config import ModelConfigurations
@@ -15,6 +15,8 @@ from services.dolphin_service import DolphinService
 from services.asr_service import ASRService
 from services.translation_service import TranslationService
 import logging
+import aiohttp
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -620,4 +622,32 @@ Answer:'''
     async def cleanup(self):
         """Cleanup all services"""
         for service in self.services.values():
-            await service.cleanup() 
+            await service.cleanup()
+
+    async def stream_chat_response(self, message: str, timeout: float = 30.0) -> AsyncGenerator[bytes, None]:
+        """Stream chat response with proper error handling"""
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
+                async with session.post(
+                    f"{self.chat_service_url}/stream",
+                    json={"message": message},
+                    chunked=True
+                ) as response:
+                    async for chunk in response.content:
+                        if not isinstance(chunk, (str, bytes)):
+                            raise TypeError(f"Invalid chunk type: {type(chunk)}")
+                        
+                        if isinstance(chunk, str):
+                            chunk = chunk.encode('utf-8')
+                        
+                        yield chunk
+                        
+        except aiohttp.ClientError as e:
+            logger.error(f"Stream error: {e}")
+            raise StreamError(f"Stream connection failed: {e}")
+        except asyncio.TimeoutError:
+            logger.error("Stream timeout")
+            raise aiohttp.ClientTimeout("Stream response timeout")
+        except Exception as e:
+            logger.error(f"Unexpected error in stream: {e}")
+            raise 

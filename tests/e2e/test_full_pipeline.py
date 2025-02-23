@@ -4,7 +4,23 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_complete_pipeline():
-    async with AsyncClient() as client:
+    async with AsyncClient(base_url="http://localhost:8000") as client:
+        # Test text generation
+        chat_response = await client.post("/chat", json={
+            "messages": [{
+                "type": "text",
+                "content": "Hello"
+            }]
+        })
+        assert chat_response.status_code == 200
+        
+        # Test translation
+        translate_response = await client.post("/translate", json={
+            "text": "Hello",
+            "target_lang": "fr"
+        })
+        assert translate_response.status_code == 200
+
         # Test the complete pipeline
         # 1. Convert text to speech
         tts_response = await client.post(

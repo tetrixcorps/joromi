@@ -3,50 +3,53 @@ from typing import Dict, Any, Optional
 import re
 
 class BankingQueryType(Enum):
-    CARD_OPERATIONS = "card"
-    ACCOUNT_INFO = "account"
-    TRANSACTION = "transaction"
-    SECURITY = "security"
-    GENERAL = "general"
+    ACCOUNT_INQUIRY = "ACCOUNT_INQUIRY"
+    CARD_SERVICES = "CARD_SERVICES"
+    SECURITY = "SECURITY"
+    GENERAL = "GENERAL"
 
 class BankingQueryParser:
-    # Keywords for query classification
-    KEYWORDS = {
-        BankingQueryType.CARD_OPERATIONS: [
-            "card", "block", "unblock", "freeze", "activate", "deactivate", "pin"
-        ],
-        BankingQueryType.ACCOUNT_INFO: [
-            "balance", "statement", "account", "details", "information"
-        ],
-        BankingQueryType.TRANSACTION: [
-            "transfer", "payment", "send money", "receive", "transaction"
-        ],
-        BankingQueryType.SECURITY: [
-            "fraud", "suspicious", "unauthorized", "security", "password"
-        ]
-    }
+    @staticmethod
+    def validate_query(query: str) -> bool:
+        """
+        Validate if query is properly formatted and contains valid content
+        """
+        if not query or not isinstance(query, str):
+            return False
+            
+        # Check for minimum length (at least 3 words)
+        if len(query.split()) < 3:
+            return False
+            
+        # Check for maximum length
+        if len(query) > 500:
+            return False
+            
+        return True
 
     @staticmethod
     def classify_query(query: str) -> BankingQueryType:
-        """Classify banking query type based on keywords"""
+        """Classify banking queries into predefined types"""
+        # Validate query first
+        if not BankingQueryParser.validate_query(query):
+            raise ValueError("Invalid query: Query must be a non-empty string with at least 3 words")
+            
         query = query.lower()
         
-        for query_type, keywords in BankingQueryParser.KEYWORDS.items():
-            if any(keyword in query for keyword in keywords):
-                return query_type
+        # Card related queries
+        if any(word in query for word in ["card", "credit", "debit", "block", "unblock", "pin"]):
+            return BankingQueryType.CARD_SERVICES
+            
+        # Account related queries
+        if any(word in query for word in ["balance", "account", "statement", "transfer"]):
+            return BankingQueryType.ACCOUNT_INQUIRY
+            
+        # Security related queries
+        if any(word in query for word in ["fraud", "suspicious", "security", "unauthorized"]):
+            return BankingQueryType.SECURITY
+            
+        # Default to general inquiry
         return BankingQueryType.GENERAL
-
-    @staticmethod
-    def validate_query(query: str) -> bool:
-        """Validate if query contains sensitive information"""
-        sensitive_patterns = [
-            r'\b\d{16}\b',  # Card numbers
-            r'\b\d{3,4}\b',  # CVV
-            r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b',  # Card format
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
-        ]
-        
-        return not any(re.search(pattern, query) for pattern in sensitive_patterns)
 
 class BankingErrorHandler:
     class BankingError(Exception):

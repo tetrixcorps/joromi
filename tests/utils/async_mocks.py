@@ -1,83 +1,113 @@
 import asyncio
 from typing import List, Union, Any
+import aiohttp
 from unittest.mock import AsyncMock
 
-class FakeContent:
-    """Mock aiohttp response content with async iteration support"""
-    def __init__(self, chunks: List[Union[str, bytes, Any]]):
-        self._chunks = chunks
+class StreamError(Exception):
+    """Custom error for stream failures"""
+    pass
+
+class BaseContent:
+    """Base class for mock content with async iteration"""
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
         self._iter = None
 
-    def __aiter__(self):
-        """Initialize async iteration"""
-        self._iter = iter(self._chunks)
-        return self
-
-    async def __anext__(self):
-        """Get next chunk asynchronously"""
-        try:
-            chunk = next(self._iter)
-            await asyncio.sleep(0)  # Simulate async behavior
-            
-            # Convert chunk to bytes if it's a string
-            if isinstance(chunk, str):
-                return chunk.encode('utf-8')
-            # Pass through if already bytes
-            elif isinstance(chunk, bytes):
-                return chunk
-            # Convert other types to string then bytes
-            else:
-                return str(chunk).encode('utf-8')
-        except StopIteration:
-            raise StopAsyncIteration
-
     async def iter_any(self):
-        """Alternative iteration method used by aiohttp"""
-        async for chunk in self:
-            yield chunk
+        """Implementation of aiohttp's StreamReader.iter_any()"""
+        for chunk in self._chunks:
+            if isinstance(chunk, str):
+                yield chunk.encode('utf-8')
+            elif isinstance(chunk, bytes):
+                yield chunk
+            else:
+                yield str(chunk).encode('utf-8')
 
     async def iter_chunked(self):
-        """Chunked iteration method"""
-        async for chunk in self:
+        """Implementation of aiohttp's StreamReader.iter_chunked()"""
+        async for chunk in self.iter_any():
             yield chunk
 
     async def read(self):
-        """Read entire content as bytes"""
+        """Implementation of aiohttp's StreamReader.read()"""
         chunks = []
-        async for chunk in self:
+        async for chunk in self.iter_any():
             chunks.append(chunk)
         return b''.join(chunks)
 
+class FakeContent(BaseContent):
+    """Standard mock content"""
+    pass
+
+class ErrorContent(BaseContent):
+    """Mock content that raises errors"""
+    def __init__(self, error):
+        super().__init__([])
+        self.error = error
+
+    async def iter_any(self):
+        raise self.error
+
+class SlowContent(BaseContent):
+    """Mock content with delayed responses"""
+    def __init__(self, chunks, delay=0.1):
+        super().__init__(chunks)
+        self.delay = delay
+
+    async def iter_any(self):
+        for chunk in self._chunks:
+            await asyncio.sleep(self.delay)
+            if isinstance(chunk, str):
+                yield chunk.encode('utf-8')
+            elif isinstance(chunk, bytes):
+                yield chunk
+            else:
+                yield str(chunk).encode('utf-8')
+
 class FakeResponseCM:
-    """Mock aiohttp ClientResponse with context manager support"""
-    def __init__(self, response_data, status=200):
+    """Context manager for fake responses"""
+    def __init__(
+        self, 
+        chunks: List[Union[str, bytes]], 
+        status: int = 200,
+        content_class: type = FakeContent,
+        **content_kwargs
+    ):
         self.mock_response = AsyncMock()
         self.mock_response.status = status
+        self.mock_response.content = content_class(chunks, **content_kwargs)
         
-        if isinstance(response_data, dict):
-            self.mock_response.json = AsyncMock(return_value=response_data)
-        elif isinstance(response_data, (bytes, str)):
-            self.mock_response.content = FakeContent([response_data])
-        elif isinstance(response_data, list):
-            self.mock_response.content = FakeContent(response_data)
-        elif isinstance(response_data, Exception):
-            self.mock_response.json = AsyncMock(side_effect=response_data)
-            self.mock_response.read = AsyncMock(side_effect=response_data)
-        
-        # Add common response methods
-        self.mock_response.read = getattr(
-            self.mock_response, 'read',
-            AsyncMock(return_value=b'')
-        )
-        self.mock_response.close = AsyncMock()
+        # Handle JSON response
+        if isinstance(chunks, (list, tuple)):
+            self.mock_response.json = AsyncMock(return_value=chunks[0] if chunks else {})
+        else:
+            self.mock_response.json = AsyncMock(return_value=chunks)
 
     async def __aenter__(self):
         return self.mock_response
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.mock_response.close()
-        return False  # Don't suppress exceptions
+        return False
 
-def create_mock_response(data, status=200):
-    """Helper function to create mock responses"""
-    return FakeResponseCM(data, status) 
+def create_error_response(error: Exception = None):
+    """Create a response that raises an error"""
+    if error is None:
+        error = aiohttp.ClientError("Connection lost")
+    return FakeResponseCM(
+        chunks=[],
+        content_class=ErrorContent,
+        error=error
+    )
+
+def create_slow_response(chunks: List[str], delay: float = 1.0):
+    """Create a response with delayed chunks"""
+    return FakeResponseCM(
+        chunks=chunks,
+        content_class=SlowContent,
+        delay=delay
+    )
+
+def create_timeout_response():
+    """Create a response that times out"""
+    return create_slow_response(["Timeout"], delay=31.0)  # Default timeout is 30s 

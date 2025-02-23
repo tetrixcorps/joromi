@@ -3,6 +3,7 @@ import aiohttp
 import logging
 from pydantic import BaseModel
 from .models import ChatMessage, BankingQueryType
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -54,16 +55,34 @@ class ModelOrchestrator:
                 result = await response.json()
                 return result["audio_url"]
 
-    async def stream_chat_response(self, message: str) -> AsyncGenerator[str, None]:
-        """Stream chat responses for real-time interaction."""
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.banking_service_url}/stream-chat",
-                json={"message": message},  # Simplified - message is always a string
-                chunked=True
-            ) as response:
-                async for chunk in response.content:
-                    yield chunk.decode()
+    async def stream_chat_response(self, message: str, timeout: float = 30.0) -> AsyncGenerator[bytes, None]:
+        """Stream chat responses with proper error handling."""
+        try:
+            timeout_config = aiohttp.ClientTimeout(total=timeout)
+            async with aiohttp.ClientSession(timeout=timeout_config) as session:
+                async with session.post(
+                    f"{self.banking_service_url}/stream-chat",
+                    json={"message": message},
+                    chunked=True
+                ) as response:
+                    async for chunk in response.content.iter_any():
+                        if not isinstance(chunk, (str, bytes)):
+                            raise TypeError(f"Invalid chunk type: {type(chunk)}")
+                        
+                        if isinstance(chunk, str):
+                            chunk = chunk.encode('utf-8')
+                        
+                        yield chunk
+                        
+        except aiohttp.ClientError as e:
+            logger.error(f"Stream error: {e}")
+            raise StreamError(f"Stream connection failed: {e}")
+        except asyncio.TimeoutError:
+            logger.error("Stream timeout")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in stream: {e}")
+            raise
 
     async def process_visual_qa(self, image_data: bytes, question: str) -> str:
         """Process visual question answering."""

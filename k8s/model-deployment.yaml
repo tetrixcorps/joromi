@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-server
+  template:
+    metadata:
+      labels:
+        app: model-server
+    spec:
+      containers:
+      - name: model-server
+        image: your-registry/model-server:latest
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/model_cache
+        env:
+        - name: TRANSFORMERS_CACHE
+          value: "/app/model_cache"
+        - name: TORCH_HOME
+          value: "/app/model_cache"
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: model-cache-pvc 
