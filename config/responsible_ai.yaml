@@ -1,0 +1,41 @@
+safety:
+  content_filtering:
+    enabled: true
+    thresholds:
+      hate_speech: 0.7
+      bias: 0.6
+      personal_info: 0.8
+      harmful_content: 0.7
+
+  rate_limiting:
+    default:
+      requests_per_minute: 60
+      burst_size: 10
+      cooldown_period: 60
+    premium:
+      requests_per_minute: 120
+      burst_size: 20
+      cooldown_period: 30
+
+monitoring:
+  resource_thresholds:
+    gpu_memory_percent: 90.0
+    cpu_percent: 80.0
+    memory_percent: 80.0
+
+  alerts:
+    error_rate_threshold: 0.05
+    latency_threshold: 2.0
+
+model_governance:
+  version_tracking: true
+  audit_logging: true
+  bias_monitoring: true
+  performance_tracking: true
+
+data_governance:
+  retention_period_days: 30
+  encryption_required: true
+  pii_handling:
+    detection_enabled: true
+    auto_redaction: true 

@@ -1,8 +1,14 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.utils.websocket import WebSocketManager
 from app.services.stream_handler import AudioStreamHandler
+from app.monitoring.metrics import (
+    AUDIO_COMPRESSION_RATIO,
+    AUDIO_PROCESSING_LATENCY,
+    ACTIVE_STREAMS
+)
 import asyncio
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -13,24 +19,42 @@ class StreamingManager:
         self.stream_handler = AudioStreamHandler()
 
     async def handle_stream(self, websocket: WebSocket, client_id: str):
-        ws_manager = WebSocketManager(websocket)
-        buffer_handler = self.stream_handler.create_buffer_handler(client_id)
-
         try:
-            while True:
-                chunk = await ws_manager.receive_audio_stream(buffer_handler)
-                if chunk:
-                    # Process chunk and send real-time feedback
-                    partial_transcription = await self.stream_handler.process_chunk(chunk)
-                    if partial_transcription:
-                        await ws_manager.safe_send({
-                            "type": "partial_transcription",
-                            "text": partial_transcription
-                        })
+            ACTIVE_STREAMS.inc()
+            ws_manager = WebSocketManager(websocket)
+            buffer_handler = await self.stream_handler.create_buffer_handler(client_id)
 
-        except WebSocketDisconnect:
+            while True:
+                start_time = time.time()
+                
+                # Receive audio chunk
+                chunk = await ws_manager.receive_audio_stream(buffer_handler)
+                
+                if chunk:
+                    # Process with compression
+                    processed = await self.stream_handler.process_chunk(chunk, client_id)
+                    
+                    if processed:
+                        # Send processed audio
+                        await ws_manager.safe_send(processed)
+                        
+                        # Record metrics
+                        AUDIO_PROCESSING_LATENCY.observe(
+                            time.time() - start_time,
+                            labels={'operation': 'process_chunk'}
+                        )
+                        
+                        stats = buffer_handler['compression_stats']
+                        AUDIO_COMPRESSION_RATIO.observe(
+                            stats['original_size'] / stats['compressed_size'],
+                            labels={'client_id': client_id}
+                        )
+
+        except Exception as e:
+            logger.error(f"Stream handling failed: {e}")
+        finally:
+            ACTIVE_STREAMS.dec()
             await self.stream_handler.cleanup_stream(client_id)
-            logger.info(f"Client {client_id} disconnected")
 
 streaming_manager = StreamingManager()
 

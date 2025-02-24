@@ -1,0 +1,32 @@
+tracing:
+  enabled: true
+  service_name: "ml-translation-service"
+  sampler:
+    type: "probabilistic"
+    rate: 0.1
+  exporter:
+    type: "jaeger"
+    endpoint: "http://jaeger:14268/api/traces"
+
+metrics:
+  enabled: true
+  push_gateway: "http://prometheus-pushgateway:9091"
+  push_interval: 10
+  labels:
+    environment: "production"
+    service: "translation"
+
+logging:
+  level: "INFO"
+  format: "json"
+  output:
+    console: true
+    file: "/var/log/app/ml-service.log"
+
+profiling:
+  enabled: true
+  interval: 60
+  types:
+    - "cpu"
+    - "memory"
+    - "gpu" 

@@ -1,0 +1,38 @@
+pruning:
+  enabled: true
+  methods:
+    magnitude:
+      target_sparsity: 0.3
+      schedule: "cubic"
+    structured:
+      target_sparsity: 0.2
+      min_channels: 32
+    gradual:
+      initial_sparsity: 0.0
+      final_sparsity: 0.5
+      pruning_steps: 10
+
+distillation:
+  enabled: true
+  temperature: 2.0
+  teacher_model: "facebook/seamless-m4t-v2-large"
+  student_architecture:
+    type: "reduced_transformer"
+    num_layers: 6
+    hidden_size: 512
+
+quantization:
+  enabled: true
+  bits: 8
+  dtype: "int8"
+  calibration_samples: 100
+
+evaluation:
+  metrics:
+    - "bleu"
+    - "translation_error_rate"
+    - "latency"
+  acceptance_criteria:
+    max_accuracy_drop: 0.05
+    min_speedup: 1.5
+    max_memory: "2GB" 
